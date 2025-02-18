@@ -1,3 +1,18 @@
+#BNF
+#<program>        ::= <expr> | <if_expr>
+#<expr>           ::= <expr> "+" <term> | <expr> "-" <term> | <term> 
+#<term>           ::= <term> "*" <factor> | <term> "/" <factor> | <factor>
+#<factor>         ::= "+" <factor> | "-" <factor> | <power>
+#<power>          ::= <base> "^" <power> | <base>
+#<base>           ::= <number> | "(" <expr> ")"
+#<comparison>     ::= <expr> "==" <expr> | <expr> "!=" <expr> | <expr> "<" <expr> | <expr> ">" <expr> |  <expr> ">=" <expr>  <expr> |  <expr> "<=" <expr> | <expr> | 
+#<logical_expr>   ::= <logical_expr> "AND" <comparison> | <logical_expr> "OR" <comparison> | "NOT" <logical_expr> | <comparison>
+#<if_expr>        ::= "IF" <logical_expr> "THEN" <expr> "ELSE" <expr>
+#<number>         ::= <digit> | <number> <digit>
+#<digit>          ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+
+
 from enum import Enum
 from typing import Any, List, Optional
 import math
@@ -27,6 +42,8 @@ class TokenType(Enum):
     NOT_EQUAL = 'NOT_EQUAL' # !=
     LESS = 'LESS'         # <
     GREATER = 'GREATER'   # >
+    GREATER_EQUAL = 'GREATER_EQUAL' # >=
+    LESS_EQUAL = 'LESS_EQUAL' # <=
     
     # Other tokens
     NUMBER = 'NUMBER'
@@ -168,11 +185,18 @@ class Lexer:
 
             if self.current_char == '<':
                 self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(TokenType.LESS_EQUAL, '<=', self.line, self.column - 2)
                 return Token(TokenType.LESS, '<', self.line, self.column - 1)
 
             if self.current_char == '>':
                 self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(TokenType.GREATER_EQUAL, '>=', self.line, self.column - 2)
                 return Token(TokenType.GREATER, '>', self.line, self.column - 1)
+
 
             self.error()
 
@@ -192,7 +216,7 @@ class Parser:
         else:
             self.error()
 
-    def atom(self) -> float:
+    def base(self) -> float:
         token = self.current_token
         if token.type == TokenType.NUMBER:
             self.eat(TokenType.NUMBER)
@@ -205,7 +229,7 @@ class Parser:
         self.error()
 
     def power(self) -> float:
-        result = self.atom()
+        result = self.base()
         
         while self.current_token.type == TokenType.POWER:
             self.eat(TokenType.POWER)
@@ -258,7 +282,7 @@ class Parser:
         result = self.expression()
         
         while self.current_token.type in (TokenType.EQUAL, TokenType.NOT_EQUAL, 
-                                        TokenType.LESS, TokenType.GREATER):
+                                        TokenType.LESS, TokenType.GREATER, TokenType.LESS_EQUAL, TokenType.GREATER_EQUAL):
             token = self.current_token
             if token.type == TokenType.EQUAL:
                 self.eat(TokenType.EQUAL)
@@ -272,6 +296,12 @@ class Parser:
             elif token.type == TokenType.GREATER:
                 self.eat(TokenType.GREATER)
                 result = result > self.expression()
+            elif token.type == TokenType.LESS_EQUAL:
+                self.eat(TokenType.LESS_EQUAL)
+                result = result <= self.expression()
+            elif token.type == TokenType.GREATER_EQUAL:
+                self.eat(TokenType.GREATER_EQUAL)
+                result = result >= self.expression()
                 
         return result
 
