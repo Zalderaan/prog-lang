@@ -1,7 +1,7 @@
 #BNF
 #<program>        ::= <expr> | <if_expr>
 #<expr>           ::= <expr> "+" <term> | <expr> "-" <term> | <term> 
-#<term>           ::= <term> "*" <factor> | <term> "/" <factor> | <factor>
+#<term>           ::= <term> "*" <factor> | <term> "/" <factor> | <term> "%" <factor> | <factor>
 #<factor>         ::= "+" <factor> | "-" <factor> | <power>
 #<power>          ::= <base> "^" <power> | <base>
 #<base>           ::= <number> | "(" <expr> ")"
@@ -196,6 +196,10 @@ class Lexer:
                     self.advance()
                     return Token(TokenType.GREATER_EQUAL, '>=', self.line, self.column - 2)
                 return Token(TokenType.GREATER, '>', self.line, self.column - 1)
+            
+            if self.current_char == '%':
+                self.advance()
+                return Token(TokenType.MODULO, '%', self.line, self.column - 1)
 
 
             self.error()
@@ -250,7 +254,7 @@ class Parser:
     def term(self) -> float:
         result = self.factor()
         
-        while self.current_token.type in (TokenType.MULTIPLY, TokenType.DIVIDE):
+        while self.current_token.type in (TokenType.MULTIPLY, TokenType.DIVIDE, TokenType.MODULO):
             token = self.current_token
             if token.type == TokenType.MULTIPLY:
                 self.eat(TokenType.MULTIPLY)
@@ -261,6 +265,12 @@ class Parser:
                 if divisor == 0:
                     raise Exception('Division by zero')
                 result /= divisor
+            elif token.type == TokenType.MODULO:
+                self.eat(TokenType.MODULO)
+                divisor = self.factor()
+                if divisor == 0:
+                    raise Exception('Division by zero')
+                result %= divisor
                 
         return result
 
